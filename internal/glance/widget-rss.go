@@ -44,8 +44,6 @@ type rssWidget struct {
 
 	cachedFeedsMutex sync.Mutex
 	cachedFeeds      map[string]*cachedRSSFeed `yaml:"-"`
-
-	Filters filterableFields[rssFeedItem] `yaml:"filters"`
 }
 
 func (widget *rssWidget) initialize() error {
@@ -73,14 +71,13 @@ func (widget *rssWidget) initialize() error {
 		}
 	}
 
+	widget.NoItemsMessage = "No items were returned from the feeds."
 	widget.cachedFeeds = make(map[string]*cachedRSSFeed)
 
 	return nil
 }
 
 func (widget *rssWidget) update(ctx context.Context) {
-	widget.NoItemsMessage = "No items were returned from the feeds."
-
 	items, err := widget.fetchItemsFromFeeds()
 
 	if !widget.canContinueUpdateAfterHandlingErr(err) {
@@ -89,15 +86,6 @@ func (widget *rssWidget) update(ctx context.Context) {
 
 	if !widget.PreserveOrder {
 		items.sortByNewest()
-	}
-
-	items = widget.Filters.Apply(items)
-
-	if widget.Filters.AllFiltered {
-		widget.NoItemsMessage = fmt.Sprintf(
-			"No items match the specified filters (%d filtered)",
-			widget.Filters.FilteredCount,
-		)
 	}
 
 	if len(items) > widget.Limit {
@@ -138,19 +126,6 @@ type rssFeedItem struct {
 	Categories  []string
 	Description string
 	PublishedAt time.Time
-}
-
-func (i rssFeedItem) filterableField(field string) any {
-	switch field {
-	case "title":
-		return i.Title
-	case "description":
-		return i.Description
-	case "posted":
-		return i.PublishedAt
-	default:
-		return nil
-	}
 }
 
 type rssFeedRequest struct {

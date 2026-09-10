@@ -33,9 +33,6 @@ type videosWidget struct {
 	Playlists         []string  `yaml:"playlists"`
 	Limit             int       `yaml:"limit"`
 	IncludeShorts     bool      `yaml:"include-shorts"`
-	SortBy            string    `yaml:"sort-by"`
-
-	Filters filterableFields[video] `yaml:"filters"`
 }
 
 func (w *videosWidget) initialize() error {
@@ -69,13 +66,11 @@ func (w *videosWidget) initialize() error {
 }
 
 func (w *videosWidget) update(ctx context.Context) {
-	videos, err := w.fetchYoutubeChannelUploads(w.Channels, w.VideoUrlTemplate, w.IncludeShorts, w.SortBy)
+	videos, err := w.fetchYoutubeChannelUploads(w.Channels, w.VideoUrlTemplate, w.IncludeShorts)
 
 	if !w.canContinueUpdateAfterHandlingErr(err) {
 		return
 	}
-
-	videos = w.Filters.Apply(videos)
 
 	if len(videos) > w.Limit {
 		videos = videos[:w.Limit]
@@ -105,7 +100,6 @@ type youtubeFeedResponseXml struct {
 	Videos      []struct {
 		Title     string `xml:"title"`
 		Published string `xml:"published"`
-		Updated   string `xml:"updated"`
 		Link      struct {
 			Href string `xml:"href,attr"`
 		} `xml:"link"`
@@ -134,25 +128,11 @@ type video struct {
 	Author       string
 	AuthorUrl    string
 	TimePosted   time.Time
-	TimeUpdated  time.Time
-}
-
-func (v video) filterableField(field string) any {
-	switch field {
-	case "title":
-		return v.Title
-	case "posted":
-		return v.TimePosted
-	case "updated":
-		return v.TimeUpdated
-	default:
-		return nil
-	}
 }
 
 type videoList []video
 
-func (v videoList) sortByPosted() videoList {
+func (v videoList) sortByNewest() videoList {
 	sort.Slice(v, func(i, j int) bool {
 		return v[i].TimePosted.After(v[j].TimePosted)
 	})
@@ -160,15 +140,7 @@ func (v videoList) sortByPosted() videoList {
 	return v
 }
 
-func (v videoList) sortByUpdated() videoList {
-	sort.Slice(v, func(i, j int) bool {
-		return v[i].TimeUpdated.After(v[j].TimeUpdated)
-	})
-
-	return v
-}
-
-func (w *videosWidget) fetchYoutubeChannelUploads(channelOrPlaylistIDs []string, videoUrlTemplate string, includeShorts bool, sortBy string) (videoList, error) {
+func (w *videosWidget) fetchYoutubeChannelUploads(channelOrPlaylistIDs []string, videoUrlTemplate string, includeShorts bool) (videoList, error) {
 	task := func(id string) (videoList, error) {
 		if cached, ok := w.cachedVideoLists.Load(id); ok {
 			entry := cached.(cachedEntry[videoList])
@@ -223,7 +195,6 @@ func (w *videosWidget) fetchYoutubeChannelUploads(channelOrPlaylistIDs []string,
 				Author:       response.Channel,
 				AuthorUrl:    response.ChannelLink + "/videos",
 				TimePosted:   parseYoutubeFeedTime(v.Published),
-				TimeUpdated:  parseYoutubeFeedTime(v.Updated),
 			})
 
 		}
@@ -255,15 +226,7 @@ func (w *videosWidget) fetchYoutubeChannelUploads(channelOrPlaylistIDs []string,
 		return nil, errNoContent
 	}
 
-	switch sortBy {
-	case "none":
-	case "updated":
-		videos.sortByUpdated()
-	case "posted":
-		videos.sortByPosted()
-	default: // "posted"
-		videos.sortByPosted()
-	}
+	videos.sortByNewest()
 
 	if failed > 0 {
 		return videos, fmt.Errorf("%w: missing videos from %d channels", errPartialContent, failed)

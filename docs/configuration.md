@@ -197,6 +197,12 @@ icon: di:immich # di for Dashboard icons https://github.com/homarr-labs/dashboar
 icon: mdi:camera # mdi for Material Design icons https://pictogrammers.com/library/mdi/
 ```
 
+The `sh:` and `di:` prefixes request SVG icons by default. If an icon is only available as a PNG, add the extension to its name:
+
+```yaml
+icon: sh:unmanic.png
+```
+
 > [!NOTE]
 >
 > The icons are loaded externally and are hosted on `cdn.jsdelivr.net`, if you do not wish to depend on a 3rd party you are free to download the icons individually and host them locally.
@@ -209,6 +215,12 @@ icon: auto-invert sh:glance-dark # with a selfh.st icon
 ```
 
 This expects the icon to be black and will automatically invert it to white when using a dark theme.
+
+If there is no `.svg` version available for a `selfh.st` or `Dashboard` icon, then you can add the image extension of the format you wish to use.
+```yaml
+icon: sh:glance.png # use the .png version of the icon
+icon: sh:glance.webp # use the .webp version of the icon
+```
 
 ## Config schema
 
@@ -464,7 +476,7 @@ Color used across the page, largely to indicate unvisited links.
 Used to indicate that something is positive, such as stock price being up, twitch channel being live or a monitored site being online. If not set, the value of `primary-color` will be used.
 
 #### `negative-color`
-Oppposite of `positive-color`.
+Opposite of `positive-color`.
 
 #### `contrast-multiplier`
 Used to increase or decrease the contrast (in other words visibility) of the text. A value of `1.3` means that the text will be 30% lighter/darker depending on the scheme. Use this if you think that some of the text on the page is too dark and hard to read. Example:
@@ -1158,6 +1170,8 @@ Can be used to specify the order in which the posts should get returned. Possibl
 Available only when `sort-by` is set to `top`. Possible values are `hour`, `day`, `week`, `month`, `year` and `all`.
 
 ##### `search`
+**Due to changes in Reddit's API, the search property works only when app-auth is configured.**
+
 Keywords to search for. Searching within specific fields is also possible, **though keep in mind that Reddit may remove the ability to use any of these at any time**:
 
 ![](images/reddit-field-search.png)
@@ -1562,6 +1576,7 @@ Examples:
 | method | string | no | GET |
 | body-type | string | no | json |
 | body | any | no | |
+| basic-auth | map | no | |
 | frameless | boolean | no | false |
 | allow-insecure | boolean | no | false |
 | skip-json-validation | boolean | no | false |
@@ -1605,6 +1620,15 @@ body:
 body-type: string
 body: |
   key1=value1&key2=value2
+```
+
+##### `basic-auth`
+Optionally specify credentials to be sent with the request using HTTP basic authentication. Example:
+
+```yaml
+basic-auth:
+  username: your-username
+  password: your-password
 ```
 
 ##### `frameless`
@@ -1709,7 +1733,7 @@ Currently, the available methods on the `.Options` object are: `StringOr`, `IntO
 </details>
 
 ##### `parameters`
-A list of keys and values that will be sent to the custom-api as query paramters.
+A list of keys and values that will be sent to the custom-api as query parameters.
 
 ##### `subrequests`
 A map of additional requests that will be executed concurrently and then made available in the template via the `.Subrequest` property. Example:
@@ -1799,7 +1823,7 @@ Whether to allow the extension to display HTML.
 > There's a reason this property is scary-sounding. It's intended to be used by developers who are comfortable with developing and using their own extensions. Do not enable it if you have no idea what it means or if you're not **absolutely sure** that the extension URL you're using is safe.
 
 ##### `parameters`
-A list of keys and values that will be sent to the extension as query paramters.
+A list of keys and values that will be sent to the extension as query parameters.
 
 ### Weather
 Display weather information for a specific location. The data is provided by https://open-meteo.com/.
@@ -1839,7 +1863,7 @@ Each bar represents a 2 hour interval. The yellow background represents sunrise 
 | show-area-name | boolean | no | false |
 
 ##### `location`
-The name of the city and country to fetch weather information for. Attempting to launch the applcation with an invalid location will result in an error. You can use the [gecoding API page](https://open-meteo.com/en/docs/geocoding-api) to search for your specific location. Glance will use the first result from the list if there are multiple.
+The name of the city and country to fetch weather information for. Attempting to launch the application with an invalid location will result in an error. You can use the [gecoding API page](https://open-meteo.com/en/docs/geocoding-api) to search for your specific location. Glance will use the first result from the list if there are multiple.
 
 ##### `units`
 Whether to show the temperature in celsius or fahrenheit, possible values are `metric` or `imperial`.
@@ -1879,7 +1903,7 @@ Preview:
 
 To reorder tasks, drag and drop them by grabbing the top side of the task:
 
-![](images/reorder-todo-tasks-prevew.gif)
+![](images/reorder-todo-tasks-preview.gif)
 
 To delete a task, hover over it and click on the trash icon.
 
@@ -2239,7 +2263,9 @@ When set to `true`, automatically converts container names such as `container_na
 ##### `sock-path`
 The path to the Docker socket. This can also be a [remote socket](https://docs.docker.com/engine/daemon/remote-access/) or proxied socket using something like [docker-socket-proxy](https://github.com/Tecnativa/docker-socket-proxy).
 
-###### `category`
+If the socket path starts with `tcp://` or `http://`, it will be treated as a remote socket. Anything else will be treated as a path to a Unix socket.
+
+##### `category`
 Filter to only the containers which have this category specified via the `glance.category` label. Useful if you want to have multiple containers widgets, each showing a different set of containers.
 
 <details>
@@ -2354,7 +2380,7 @@ Only required when using AdGuard Home. The username used to log into the admin d
 ##### `password`
 Required when using AdGuard Home, where the password is the one used to log into the admin dashboard.
 
-Also required when using Pi-hole major version 6 and above, where the password is the one used to log into the admin dashboard or the application password, which can be found in `Settings -> Web Interface / API -> Configure app password`.
+For Pi-hole version 6+, this field is required if you have set a password to log into Pi-hole. You can either use the password you use to log into the admin dashboard or the application password, which can be found in `Settings -> Web Interface / API -> Configure app password`.
 
 ##### `token`
 Required when using Pi-hole major version 5 or earlier. The API token which can be found in `Settings -> API -> Show API token`.
@@ -2395,6 +2421,8 @@ To display data from a remote server you need to have the Glance Agent running o
 In the event that the CPU temperature goes over 80°C, a flame icon will appear next to the CPU. The progress indicators will also turn red (or the equivalent of your negative color) to hopefully grab your attention if anything is unusually high:
 
 ![](images/server-stats-flame-icon.png)
+
+The CPU value is calculated from the system's load average (1 minute, with the 15 minute average shown in the popover) relative to the number of logical CPU cores. On Linux, the load average also includes processes that are waiting for disk I/O, so on servers with a lot of disk activity, such as a NAS with spinning hard drives, the value can be noticeably higher than the actual CPU utilization.
 
 #### Properties
 | Name | Type | Required | Default |
@@ -2528,7 +2556,7 @@ The maximum number of latest open pull requests to show. Set to `-1` to not show
 The maximum number of latest open issues to show. Set to `-1` to not show any.
 
 ##### `commits-limit`
-The maximum number of lastest commits to show from the default branch. Set to `-1` to not show any.
+The maximum number of latest commits to show from the default branch. Set to `-1` to not show any.
 
 ### Bookmarks
 Display a list of links which can be grouped.
